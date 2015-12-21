@@ -16,9 +16,9 @@
 
 clone_repo="True"
 if [ -z "$1" ]; then
-    clone_url="https://github.com/butterproject/butter-desktop.git"
+    clone_url="https://github.com/just-some-tall-bloke/butter-desktop.git"
 elif [ "$1" = "ssh" ]; then
-    clone_url="ssh://git@github.com:butterproject/butter-desktop.git"
+    clone_url="ssh://git@github.com:just-some-tall-bloke/butter-desktop.git"
 else
     clone_url="$1"
 fi
