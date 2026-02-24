@@ -5,3 +5,5 @@ coverage
 dist
 npm-debug.log
 out/
+/.ralph
+MODERNIZATION.md
