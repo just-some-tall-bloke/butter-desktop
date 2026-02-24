@@ -1,50 +1,61 @@
-import {createActions, handleActions} from 'redux-actions'
+import {createSlice} from '@reduxjs/toolkit'
 
-const MARKERSActions = {
-  ADD: undefined,
-  REMOVE: undefined,
-  TOGGLE: undefined
-}
-
-const actions = createActions({
-  FAVOURITES: MARKERSActions,
-  SEEN: MARKERSActions
-})
-
-const MARKERSHandlers = (item) => ({
-  ADD: (state, {payload}) => {
-    state[item][payload] = true
-    return state
-  },
-  REMOVE: (state, {payload}) => {
-    delete state[item][payload]
-    return state
-  },
-  TOGGLE: (state, {payload}) => {
-    if (state[item][payload]) {
-      delete state[item][payload]
-    } else {
-      state[item][payload] = true
+const markersSlice = createSlice({
+  name: 'markers',
+  initialState: {favourites: {}, seen: {}},
+  reducers: {
+    addFavourite: (state, action) => {
+      state.favourites[action.payload] = true
+    },
+    removeFavourite: (state, action) => {
+      delete state.favourites[action.payload]
+    },
+    toggleFavourite: (state, action) => {
+      const id = action.payload
+      if (state.favourites[id]) {
+        delete state.favourites[id]
+      } else {
+        state.favourites[id] = true
+      }
+    },
+    addSeen: (state, action) => {
+      state.seen[action.payload] = true
+    },
+    removeSeen: (state, action) => {
+      delete state.seen[action.payload]
+    },
+    toggleSeen: (state, action) => {
+      const id = action.payload
+      if (state.seen[id]) {
+        delete state.seen[id]
+      } else {
+        state.seen[id] = true
+      }
     }
-    return state
   }
 })
 
-const reducer = handleActions({
-  FAVOURITES: MARKERSHandlers('favourites'),
-  SEEN: MARKERSHandlers('seen')
-}, {favourites: {}, seen: {}})
+const {addFavourite, removeFavourite, toggleFavourite, addSeen, removeSeen, toggleSeen} = markersSlice.actions
 
-const bindMarkersActions = (dispatch) =>
-  Object.keys(actions)
-    .reduce((acc, action) =>
-      Object.assign(acc, {
-        [action]: {
-          add: (id) => dispatch(actions[action].add(id)),
-          remove: (id) => dispatch(actions[action].remove(id)),
-          toggle: (id) => dispatch(actions[action].toggle(id))
-        }
-      }), {})
+const reducer = markersSlice.reducer
+
+const actions = {
+  favourites: {add: addFavourite, remove: removeFavourite, toggle: toggleFavourite},
+  seen: {add: addSeen, remove: removeSeen, toggle: toggleSeen}
+}
+
+const bindMarkersActions = (dispatch) => ({
+  favourites: {
+    add: (id) => dispatch(actions.favourites.add(id)),
+    remove: (id) => dispatch(actions.favourites.remove(id)),
+    toggle: (id) => dispatch(actions.favourites.toggle(id))
+  },
+  seen: {
+    add: (id) => dispatch(actions.seen.add(id)),
+    remove: (id) => dispatch(actions.seen.remove(id)),
+    toggle: (id) => dispatch(actions.seen.toggle(id))
+  }
+})
 
 const markers = {
   reducer,

@@ -1,20 +1,13 @@
 'use strict;'
 
-/* redux */
-import {compose, createStore, applyMiddleware, combineReducers} from 'redux'
-import { routerReducer } from 'react-router-redux'
-import thunk from 'redux-thunk'
+import {configureStore, combineReducers} from '@reduxjs/toolkit'
+import { connectRouter } from 'connected-react-router'
 import reduxProviderAdapter from 'butter-redux-provider'
 
-/* storage */
-import * as storage from 'redux-storage'
-import createEngine from 'redux-storage-engine-localforage'
-import debounce from 'redux-storage-decorator-debounce'
-import filter from 'redux-storage-decorator-filter'
+import {persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER} from 'redux-persist'
+import createIdbStorage from 'redux-persist-indexeddb-storage'
 import localforage from 'localforage'
-import LRU from 'lru-cache'
 
-/* reducers/actions */
 import markers from './redux/markers'
 import filters from './redux/filters'
 import streamer from './redux/streamer'
@@ -28,16 +21,17 @@ const forageConfig = {
   size: 4980736
 }
 
-const loadCache = () => {
+const loadCache = async () => {
   const store = localforage.createInstance(Object.assign({storeName: 'butter_cache'},
     forageConfig))
-  return store.keys().then((keys) => (
-    Promise.all(keys.map(k => store.getItem(k)))
-  )).then(dehydrate => createCache(store, dehydrate))
+  const keys = await store.keys()
+  const dehydrate = await Promise.all(keys.map(k => store.getItem(k)))
+  return createCache(store, dehydrate)
 }
 
 const createCache = (store, dehydrate = []) => {
-  const cache = LRU({
+  const {LRU} = require('lru-cache')
+  const cache = new LRU({
     max: 1000,
     dispose: (k) => store.removeItem(k)
   })
@@ -101,7 +95,7 @@ const reducersFromTabs = (tabs, cache) => {
   }
 }
 
-const buildRootReducer = (tabs, cachedSettings, cache) => {
+export const createRootReducer = (history, tabs, cachedSettings, cache) => {
   const {providerActions, providerReducers} = reducersFromTabs(tabs, cache)
   return combineReducers({
     ...providerReducers,
@@ -109,43 +103,46 @@ const buildRootReducer = (tabs, cachedSettings, cache) => {
     filters: filters.reducer,
     streamer: streamer.reducer,
     settings: settings.reducerCreator(cachedSettings),
-    router: routerReducer,
+    router: connectRouter(history),
     cache: () => cache,
     providerActions: () => providerActions,
   })
 }
 
-const butterCreateStore = ({tabs, ...cachedSettings}) => {
-  const persistEngine = debounce(
-    filter(
-      createEngine('butterstorage',
-        Object.assign({
-          storeName: 'redux_storage'
-        }, forageConfig)
-      ), ['markers', 'settings']),
-    1500)
-  const middlewares = [thunk, storage.createMiddleware(persistEngine)]
-  const composeEnhancers = (typeof window !== 'undefined' && window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__) || compose
-
-  const enhancer = composeEnhancers(applyMiddleware(...middlewares))
-
-  return loadCache()
-    .then(cache => {
-      const rootReducer = buildRootReducer(tabs, cachedSettings, cache)
-      const persistReducer = storage.reducer(rootReducer)
-      const store = createStore(persistReducer, enhancer)
-
-      storage.createLoader(persistEngine)(store)
-        .catch(() => console.log('Failed to load previous state'))
-        .then(() => {
-          const {providerActions} = store.getState()
-
-          Object.values(providerActions)
-            .map(a => store.dispatch(a.FETCH({page: 0})))
-        })
-
-      return {store}
-    })
+const persistConfig = {
+  key: 'butter',
+  version: 1,
+  storage: createIdbStorage({
+    dbName: 'butterstorage',
+    storeName: 'redux_storage'
+  }),
+  whitelist: ['markers', 'settings']
 }
 
-export {butterCreateStore as default}
+export const butterCreateStore = async (history, {tabs, ...cachedSettings}) => {
+  const cache = await loadCache()
+  const rootReducer = createRootReducer(history, tabs, cachedSettings, cache)
+  const persistedReducer = persistReducer(persistConfig, rootReducer)
+
+  const store = configureStore({
+    reducer: persistedReducer,
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware({
+        serializableCheck: {
+          ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+          ignoredPaths: ['cache']
+        }
+      })
+  })
+
+  const persistor = persistStore(store)
+
+  const {providerActions} = store.getState()
+
+  Object.values(providerActions)
+    .map(a => store.dispatch(a.FETCH({page: 0})))
+
+  return {store, persistor}
+}
+
+export default butterCreateStore

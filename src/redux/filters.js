@@ -1,37 +1,38 @@
-import {createAction, handleActions} from 'redux-actions'
-import debounce from 'debounce'
+import {createSlice} from '@reduxjs/toolkit'
+import debounce from 'lodash/debounce'
 
-const SEARCH = 'BUTTER/FILTERS/SEARCH'
-const GENRE = 'BUTTER/FILTERS/GENRE'
-const SORTER = 'BUTTER/FILTERS/SORTER'
-const ORDER = 'BUTTER/FILTERS/ORDER'
+const filtersSlice = createSlice({
+  name: 'filters',
+  initialState: {search: null, genre: null, sorter: 'trending', order: 'desc'},
+  reducers: {
+    search: (state, action) => {
+      state.search = action.payload
+    },
+    genre: (state, action) => {
+      state.genre = action.payload
+    },
+    sorter: (state, action) => {
+      state.sorter = action.payload
+    },
+    order: (state, action) => {
+      state.order = action.payload
+    }
+  }
+})
 
-const actions = {
-  SEARCH: createAction(SEARCH),
-  GENRE: createAction(GENRE),
-  SORTER: createAction(SORTER),
-  ORDER: createAction(ORDER)
-}
-
-const mapToState = (key) => (state, {payload}) => Object.assign({}, state, {[key]: payload})
-
-const reducer = handleActions({
-  [SEARCH]: mapToState('search'),
-  [GENRE]: mapToState('genre'),
-  [SORTER]: mapToState('sorter'),
-  [ORDER]: mapToState('order'),
-}, {search: null, genre: null, sorter: 'trending', order: 'desc'})
+const {search, genre, sorter, order} = filtersSlice.actions
+const reducer = filtersSlice.reducer
 
 const bindFiltersActions = (dispatch) => ({
-  search: debounce((term) => dispatch(actions.SEARCH(term)), 250),
-  genre: (genre) => dispatch(actions.GENRE(genre)),
-  sorter: (sorter) => dispatch(actions.SORTER(sorter)),
-  order: (order) => dispatch(actions.ORDER(order))
+  search: debounce((term) => dispatch(search(term)), 250),
+  genre: (g) => dispatch(genre(g)),
+  sorter: (s) => dispatch(sorter(s)),
+  order: (o) => dispatch(order(o))
 })
 
 const filters = {
   reducer,
-  actions
+  actions: {search, genre, sorter, order}
 }
 
 export {filters as default, bindFiltersActions}

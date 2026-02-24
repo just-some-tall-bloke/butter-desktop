@@ -1,33 +1,32 @@
-import {createAction, handleActions} from 'redux-actions'
+import {createSlice} from '@reduxjs/toolkit'
 
-const SET = 'BUTTER/SETTINGS/SET'
-const SET_ALL = 'BUTTER/SETTINGS/SET_ALL'
-
-const actions = {
-    SET: createAction(SET),
-    SET_ALL: createAction(SET_ALL)
-}
-
-const reducerCreator = (cachedSettings) => handleActions({
-    [SET]: (state, {payload}) => {
-        const {key, value} = payload
-
-        return {
-            ...state,
-            [key]: value
+const settingsSlice = createSlice({
+    name: 'settings',
+    initialState: {},
+    reducers: {
+        set: (state, action) => {
+            const {key, value} = action.payload
+            state[key] = value
+        },
+        setAll: (state, action) => {
+            return {...state, ...action.payload}
         }
-    },
-    [SET_ALL]: (state, {payload}) => ({...state, ...payload})
-}, cachedSettings)
+    }
+})
+
+const {set, setAll} = settingsSlice.actions
+const reducer = settingsSlice.reducer
 
 const bindSettingsActions = (dispatch) => ({
-    set: (key, value) => dispatch(actions.SET({key, value})),
-    setAll: (values) =>  dispatch(actions.SET_ALL(values)),
+    set: (key, value) => dispatch(set({key, value})),
+    setAll: (values) =>  dispatch(setAll(values)),
 })
 
 const settings = {
-    reducerCreator,
-    actions
+    reducerCreator: (cachedSettings) => {
+        return (state = cachedSettings) => reducer(state)
+    },
+    actions: {set, setAll}
 }
 
 export {settings as default, bindSettingsActions}

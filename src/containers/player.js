@@ -4,7 +4,7 @@ import ButterProvider from 'butter-provider'
 import PlayerView from '../components/player'
 
 import {connectItem, fetchDetail} from '../utils'
-import StreamerReduxer from '../redux/streamer'
+import {serve, close} from '../redux/streamer'
 
 const getOrder = (array, order) => (
     array.filter(element => Number(element.order) === Number(order))[0]
@@ -54,7 +54,7 @@ const startStreamer = (props) => {
     if (streamer.loaded !== url && ! streamer.loading && ! loading) {
         loading = true
         console.error('dispatching SERVE', url)
-        dispatch(StreamerReduxer.actions.SERVE(url))
+        dispatch(serve(url))
     }
 
     return {
@@ -64,7 +64,7 @@ const startStreamer = (props) => {
                 history.goBack()
                 console.error('dispatching CLOSE')
                 setTimeout(() => (
-                    dispatch(StreamerReduxer.actions.CLOSE())
+                    dispatch(close())
                 ), 0)
 
             },

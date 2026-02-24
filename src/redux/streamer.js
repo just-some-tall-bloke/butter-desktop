@@ -1,5 +1,4 @@
-import {createAsyncAction, createReducer} from 'redux-action-tools'
-import {createAction, handleActions} from 'redux-actions'
+import {createSlice, createAsyncThunk} from '@reduxjs/toolkit'
 
 import {remote} from 'electron'
 
@@ -7,74 +6,89 @@ const StreamServer = remote.require('butter-stream-server')
 
 let server
 
-const SERVE = 'BUTTER/STREAMER/SERVE'
-const CLOSE = 'BUTTER/STREAMER/CLOSE'
-
-const actions = {
-    CLOSE: createAction(CLOSE),
-    SERVE: createAsyncAction(SERVE, (url, dispatch, getState) => {
-        if (server) {
-            server.close()
-        }
-
-        return new Promise((resolve, reject) => {
-            console.error('start streamer', url)
-            server = new StreamServer(url, {
-                progressInterval: 200,
-                buffer: 100,
-                port: 9999,
-                writeDir: '',
-            }).on('ready', ({streamUrl}) => {
-                console.error('ready--->resolving', streamUrl)
-                resolve(`${streamUrl}/0/?${url}`)
-            })
-        })
-    })
-}
-
-const serveReducer = createReducer()
-    .when(SERVE, ({...state}, {payload}) => ({
-        ...state,
-        loading: payload,
-        loaded: null
-    }))
-    .done((state, {payload}) => ({
-        ...state,
-        url: payload,
-        loading: false,
-        loaded: state.loading
-    }))
-    .failed((state, action) => ({
-        ...state,
-        url: null,
-        failed: action,
-        loading: false
-    }))
-    .build()
-
-const reducer = (state, action) => {
-    if (! state) return {loading: false, loaded: null}
-
-    switch(action.type) {
-        case `${SERVE}`:
-        case `${SERVE}_COMPLETED`:
-        case `${SERVE}_FAILED`:
-            return serveReducer(state, action)
-        case CLOSE:
-            server.close()
-            server = null
-            return {...state, loading: false, loaded: null, url: null}
-        default:
-            return state
+export const serve = createAsyncThunk(
+  'streamer/serve',
+  async (url) => {
+    if (server) {
+      server.close()
     }
-}
+
+    return new Promise((resolve, reject) => {
+      console.error('start streamer', url)
+      server = new StreamServer(url, {
+        progressInterval: 200,
+        buffer: 100,
+        port: 9999,
+        writeDir: '',
+      }).on('ready', ({streamUrl}) => {
+        console.error('ready--->resolving', streamUrl)
+        resolve(`${streamUrl}/0/?${url}`)
+      }).on('error', (err) => {
+        reject(err)
+      })
+    })
+  }
+)
+
+export const close = createAsyncThunk(
+  'streamer/close',
+  async () => {
+    if (server) {
+      server.close()
+      server = null
+    }
+    return true
+  }
+)
+
+const initialState = {loading: false, loaded: null, url: null, failed: null}
+
+const streamerSlice = createSlice({
+  name: 'streamer',
+  initialState,
+  reducers: {
+    clearError: (state) => {
+      state.failed = null
+    }
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(serve.pending, (state, action) => {
+        state.loading = action.meta.arg
+        state.loaded = null
+        state.url = null
+        state.failed = null
+      })
+      .addCase(serve.fulfilled, (state, action) => {
+        state.url = action.payload
+        state.loading = false
+        state.loaded = state.loading
+      })
+      .addCase(serve.rejected, (state, action) => {
+        state.url = null
+        state.failed = action.error
+        state.loading = false
+      })
+      .addCase(close.fulfilled, (state) => {
+        state.loading = false
+        state.url = null
+        state.loaded = null
+        state.failed = null
+      })
+  }
+})
+
+const {clearError} = streamerSlice.actions
+const reducer = streamerSlice.reducer
+
 const bindStreamerActions = (dispatch) => ({
-    serve: (url) => dispatch(actions.serve(url))
+  serve: (url) => dispatch(serve(url)),
+  close: () => dispatch(close())
 })
 
 const streamer = {
-    reducer,
-    actions
+  reducer,
+  actions: {serve, close}
 }
 
 export {streamer as default, bindStreamerActions}
