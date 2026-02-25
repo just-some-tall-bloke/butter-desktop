@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /c/tmp/butter-desktop && npm run build 2>&1)",
+      "Bash(head:*)",
+      "Bash(cd:*)",
+      "Bash(tail:*)",
+      "Bash(cd /c/tmp/butter-desktop && node -e \"const cfg = require\\('./webpack.config.js'\\); const rule = cfg.module.rules.find\\(r => r.use && r.use.loader === 'babel-loader'\\); console.log\\('Babel rule:', JSON.stringify\\(rule, null, 2\\)\\)\" 2>&1)"
+    ]
+  }
+}

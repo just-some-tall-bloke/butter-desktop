@@ -1,6 +1,7 @@
 // Basic init
 const electron = require('electron')
-const {app, BrowserWindow} = electron
+const {app, BrowserWindow, ipcMain} = electron
+const path = require('path')
 
 // To avoid being garbage collected
 let mainWindow
@@ -9,7 +10,12 @@ let config = {
   height: 600,
   frame: false,
   transparent: true,
-  defaultEncoding: 'utf8'
+  defaultEncoding: 'utf8',
+  webPreferences: {
+    contextIsolation: true,
+    nodeIntegration: false,
+    preload: path.join(__dirname, 'preload.js')
+  }
 }
 
 const createWindow = () => {
@@ -55,4 +61,19 @@ app.on('activate', () => {
   if (mainWindow === null) {
     createWindow()
   }
+})
+
+// IPC handlers for preload script
+ipcMain.handle('get-current-window', () => mainWindow)
+ipcMain.handle('minimize-window', () => mainWindow?.minimize())
+ipcMain.handle('maximize-window', () => {
+  if (mainWindow?.isMaximized()) {
+    mainWindow.unmaximize()
+  } else {
+    mainWindow?.maximize()
+  }
+})
+ipcMain.handle('close-window', () => mainWindow?.close())
+ipcMain.handle('require-module', (event, moduleName) => {
+  return require(moduleName)
 })

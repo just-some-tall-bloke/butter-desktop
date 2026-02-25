@@ -1,8 +1,6 @@
 import {createSlice, createAsyncThunk} from '@reduxjs/toolkit'
 
-import {remote} from 'electron'
-
-const StreamServer = remote.require('butter-stream-server')
+const { electronAPI } = window
 
 let server
 
@@ -12,6 +10,8 @@ export const serve = createAsyncThunk(
     if (server) {
       server.close()
     }
+
+    const StreamServer = await electronAPI.requireModule('butter-stream-server')
 
     return new Promise((resolve, reject) => {
       console.error('start streamer', url)

@@ -1,15 +1,15 @@
 import {connect} from 'react-redux'
 
-import {bindMarkersActions} from './redux/markers'
+import {bindMarkersActions} from './redux/makers'
 
-/* electron */
-import {remote} from 'electron'
+/* electron API */
+const electronAPI = window.electronAPI
 
 const Identity = (a) => a
 
 const doOnWindow = (fn) =>
   (arg) => {
-    const window = remote.getCurrentWindow()
+    const window = electronAPI?.getCurrentWindow()
 
     if (window) {
       return fn(window, arg)
@@ -19,9 +19,9 @@ const doOnWindow = (fn) =>
   }
 
 const windowActions = {
-  close: doOnWindow(window => window.close()),
-  min: doOnWindow(window => window.minimize()),
-  max: doOnWindow(window => window.isMaximized() ? window.unmaximize() : window.maximize()),
+  close: doOnWindow(window => electronAPI.closeWindow()),
+  min: doOnWindow(window => electronAPI.minimizeWindow()),
+  max: doOnWindow(window => electronAPI.maximizeWindow()),
   fullscreen: doOnWindow((window, active) => window.setFullScreen(active))
 }
 

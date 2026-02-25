@@ -13,7 +13,7 @@ import filters from './redux/filters'
 import streamer from './redux/streamer'
 import settings from './redux/settings'
 
-import {remote} from 'electron'
+const { electronAPI } = window
 
 const forageConfig = {
   name: 'Butter',
@@ -52,7 +52,7 @@ const providersFromTab = (tab) => (
     let instance = null
 
     try {
-      const Provider = remote.require(`butter-provider-${name}`)
+      const Provider = await electronAPI.requireModule(`butter-provider-${name}`)
       instance = new Provider(uri)
     } catch (e) {
       console.error('couldnt load provider', name)
